@@ -67,5 +67,150 @@
             background: rgba(5, 5, 10, 0.85);
             z-index: 100;
         }
+        .dialog-box {
+            text-align: center;
+            max-width: 400px;
+            padding: 40px;
+            border: 1px solid var(--ghost);
+        }
+
+        .btn-primary {
+            background: transparent;
+            color: #fff;
+            border: 1px solid #fff;
+            padding: 12px 40px;
+            margin-top: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .btn-primary:hover {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 20px #fff;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="heads-up-display">
+        <div class="session-info">
+            <div class="label">Sector Stability</div>
+            <div class="value" id="score-output">00000</div>
+        </div>
+        <div class="session-info">
+            <div class="label">Threat Level</div>
+            <div class="value" id="level-output">1</div>
+        </div>
+    </div>
+
+    <div id="overlay-portal">
+        <div class="dialog-box">
+            <h2 id="msg-header">VOID SECTOR</h2>
+            <p id="msg-body">The core is under observation. Intercept all incoming anomalies.</p>
+            <button class="btn-primary" id="btn-initialize">Commence Mission</button>
+        </div>
+    </div>
+
+    <canvas id="viewport"></canvas>
+
+    <script>
+        const renderSurface = document.getElementById('viewport');
+        const drawContext = renderSurface.getContext('2d');
+        const portal = document.getElementById('overlay-portal');
+        const launchBtn = document.getElementById('btn-initialize');
         
+        let viewW, viewH, midX, midY;
+        let activeSession = false;
+        let frameRequest;
+        let lastFrameTime = 0;
+        
+        let sessionScore = 0;
+        let sessionRank = 1;
+        let difficultyMultiplier = 1;
+
+        let interceptor;
+        let swarm = [];
+        let lightBolts = [];
+        let debrisParticles = [];
+        let starfield = [];
+
+        const inputState = { x: 0, y: 0 };
+
+        function updateSurfaceSize() {
+            viewW = window.innerWidth;
+            viewH = window.innerHeight;
+            renderSurface.width = viewW;
+            renderSurface.height = viewH;
+            midX = viewW / 2;
+            midY = viewH / 2;
+        }
+
+        class Kinematics {
+            constructor(posX, posY, radius) {
+                this.posX = posX;
+                this.posY = posY;
+                this.radius = radius;
+                this.vX = 0;
+                this.vY = 0;
+            }
+        }
+
+        class Actor extends Kinematics {
+            constructor() {
+                super(midX, midY, 12);
+                this.rotation = 0;
+                this.coreColor = '#00d2ff';
+            }
+
+            render() {
+                drawContext.save();
+                drawContext.translate(midX, midY);
+                drawContext.rotate(this.rotation);
+                
+                drawContext.beginPath();
+                drawContext.moveTo(20, 0);
+                drawContext.lineTo(-10, 12);
+                drawContext.lineTo(-10, -12);
+                drawContext.closePath();
+                
+                drawContext.strokeStyle = this.coreColor;
+                drawContext.lineWidth = 2;
+                drawContext.stroke();
+                
+                drawContext.shadowBlur = 10;
+                drawContext.shadowColor = this.coreColor;
+                drawContext.stroke();
+                drawContext.restore();
+            }
+
+            sync(targetX, targetY) {
+                this.rotation = Math.atan2(targetY - midY, targetX - midX);
+                this.render();
+            }
+        }
+
+        class Anomaly extends Kinematics {
+            constructor() {
+                const spawnEdge = Math.floor(Math.random() * 4);
+                let startX, startY;
+
+                if (spawnEdge === 0) { startX = Math.random() * viewW; startY = -50; }
+                else if (spawnEdge === 1) { startX = viewW + 50; startY = Math.random() * viewH; }
+                else if (spawnEdge === 2) { startX = Math.random() * viewW; startY = viewH + 50; }
+                else { startX = -50; startY = Math.random() * viewH; }
+
+                super(startX, startY, 15 + Math.random() * 10);
+                
+                this.hue = Math.random() * 60 + 330; 
+                this.speed = (0.8 + Math.random() * 1.2) * difficultyMultiplier;
+                
+                const trajectory = Math.atan2(midY - this.posY, midX - this.posX);
+                this.vX = Math.cos(trajectory) * this.speed;
+                this.vY = Math.sin(trajectory) * this.speed;
+            }
 </html>
